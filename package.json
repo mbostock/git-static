@@ -11,7 +11,8 @@
     "url": "http://github.com/mbostock/git-host.git"
   },
   "dependencies": {
-    "express": "3.0.0",
-    "gitteh": "0.1.0"
+    "express": "3.0.x",
+    "gitteh": "0.1.0",
+    "mime": "1.2.x"
   }
 }

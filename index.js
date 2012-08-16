@@ -1,5 +1,6 @@
 var express = require("express"),
     gitteh = require("gitteh"),
+    mime = require("mime"),
     path = require("path");
 
 gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error, repository) {
@@ -9,10 +10,10 @@ gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error
 
   server.get(/^\/HEAD\/(.*)/, function(request, response) {
     repository.getReference("HEAD", function(error, reference) {
-      if (error) return response.end(error + "");
-      reference.resolve(function(error, reference2) {
-        if (error) return response.end(error + "");
-        serveFile(reference2.target, request.params[0], response);
+      if (error) return serveError(500, error + "", response);
+      reference.resolve(function(error, reference) {
+        if (error) return serveError(500, error + "", response);
+        serveFile(reference.target, request.params[0], response);
       });
     });
   });
@@ -23,21 +24,29 @@ gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error
 
   function serveFile(sha1, file, response) {
     repository.getCommit(sha1, function(error, commit) {
-      if (error) return response.end(error + "");
+      if (error) return serveError(500, error + "", response);
       repository.getTree(commit.tree, function(error, tree) {
-        if (error) return response.end(error + "");
+        if (error) return serveError(500, error + "", response);
         var found = false;
         tree.entries.forEach(function(entry) {
           if (entry.name === file) {
             repository.getBlob(entry.id, function(error, blob) {
+              response.writeHead(200, {"Content-Type": mime.lookup(file, "text/plain") + "; charset=utf-8"});
               response.end(blob.data.toString("UTF-8"));
             });
             found = true;
           }
         });
-        if (!found) response.end("File not found.");
+        if (!found) {
+          serveError(404, "File not found.", response);
+        }
       });
     });
+  }
+
+  function serveError(code, message, response) {
+    response.writeHead(code, {"Content-Type": "text/plain"});
+    response.end(message);
   }
 
   server.listen(3000);
