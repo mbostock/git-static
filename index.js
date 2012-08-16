@@ -31,8 +31,10 @@ gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error
         tree.entries.forEach(function(entry) {
           if (entry.name === file) {
             repository.getBlob(entry.id, function(error, blob) {
-              response.writeHead(200, {"Content-Type": mime.lookup(file, "text/plain") + "; charset=utf-8"});
-              response.end(blob.data.toString("UTF-8"));
+              var type = mime.lookup(file, "text/plain");
+              if (text(type)) type += "; charset=utf-8";
+              response.writeHead(200, {"Content-Type": type});
+              response.end(blob.data);
             });
             found = true;
           }
@@ -47,6 +49,10 @@ gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error
   function serveError(code, message, response) {
     response.writeHead(code, {"Content-Type": "text/plain"});
     response.end(message);
+  }
+
+  function text(type) {
+    return /^(text\/)|(application\/(javascript|json)|image\/svg$)/.test(type);
   }
 
   server.listen(3000);
