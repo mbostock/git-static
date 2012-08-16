@@ -1,4 +1,4 @@
-# Git Host
+# Git Static
 
 Serve static files backed by Git.
 
