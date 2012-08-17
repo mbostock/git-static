@@ -3,7 +3,7 @@ var express = require("express"),
     mime = require("mime"),
     path = require("path");
 
-gitteh.openRepository(path.join(__dirname, "repository", ".git"), function(error, repository) {
+gitteh.openRepository(path.join(__dirname, "repository"), function(error, repository) {
   if (error) throw error;
 
   var server = express();

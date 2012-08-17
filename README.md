@@ -10,16 +10,20 @@ After running `npm install`, you'll need to fix gitteh by running the following 
 mv node_modules/gitteh/build/Release node_modules/gitteh/build/default
 ```
 
-Next, you'll want to create a Git repository to hold the static files:
+Next, you'll want to initialize a bare Git repository to hold the static files:
 
 ```bash
 mkdir repository
 cd repository
-git init
-echo 'Hello, world!' > test.html
-git add .
-git commit -m 'Initial commit.'
-cd ..
+git init --bare
+```
+
+Then, push from your source Git repository the files you want to serve:
+
+```bash
+cd ~/Development/other
+git remote add static ~/Development/git-static/repository
+git push static master
 ```
 
 Now you can launch the server!
@@ -28,4 +32,4 @@ Now you can launch the server!
 node index
 ```
 
-Go to <http://localhost:3000/HEAD/test.html> to view the file you created. You can replace `HEAD` with a specific commit version. In the future, git-static will support revision parsing, so you can use short names and aliases for commits such as "0ad4156" or "HEAD~1".
+Go to <http://localhost:3000/HEAD/path/to/file.html> to view a file from the source repository. You can replace `HEAD` with a specific commit version. In the future, git-static will support revision parsing, so you can use short names and aliases for commits such as "0ad4156" or "HEAD~1".
