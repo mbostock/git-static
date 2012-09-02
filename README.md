@@ -29,7 +29,7 @@ git push static master
 Now you can launch the server!
 
 ```bash
-node index
+node examples/server --repository repository
 ```
 
 Go to <http://localhost:3000/HEAD/path/to/file.html> to view a file from the source repository. You can replace `HEAD` with a specific commit version. In the future, git-static will support revision parsing, so you can use short names and aliases for commits such as "0ad4156" or "HEAD~1".

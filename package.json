@@ -10,8 +10,11 @@
     "url": "http://github.com/mbostock/git-static.git"
   },
   "dependencies": {
-    "express": "3.0.x",
     "gitteh": "0.1.0",
     "mime": "1.2.x"
+  },
+  "devDependencies": {
+    "express": "3.0.x",
+    "optimist": "0.3.4"
   }
 }
