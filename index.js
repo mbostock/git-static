@@ -3,6 +3,9 @@ var gitteh = require("gitteh"),
     mime = require("mime"),
     path = require("path");
 
+// Since we have to exec git rev-parse, make sure the arguments are safe.
+var safeRe = /^[0-9A-Za-z_.~/-]+$/;
+
 exports.route = function() {
   var repository = defaultRepository,
       sha = defaultSha,
@@ -15,41 +18,28 @@ exports.route = function() {
         file_;
 
     if ((repository_ = repository(request.url)) == null
+        || !safeRe.test(repository_)
         || (sha_ = sha(request.url)) == null
-        || (file_ = file(request.url)) == null) return serveNotFound();
+        || !safeRe.test(sha_)
+        || (file_ = file(request.url)) == null
+        || !safeRe.test(file_)) return serveNotFound();
 
     gitteh.openRepository(repository_, function(error, repository) {
-      return error ? serveError(error)
-          : /^[0-9a-f]{40}$/.test(sha_) ? serveSha(sha_)
-          : serveReference(sha_);
+      return error ? serveError(error) : serveReference(sha_);
 
       // Until gitteh supports rev-parse, this is the best we can do.
       function serveReference(reference) {
-        if (!/^[0-9A-Za-z_.~]+$/.test(reference)) return serveNotFound(); // for safety
-        exec("git rev-parse " + reference, {cwd: repository_}, function(error, stdout, stderr) {
+        exec("git rev-parse " + reference + ":" + file_, {cwd: repository_}, function(error, stdout, stderr) {
           if (error) return error.code === 128 ? serveNotFound() : serveError(error);
-          serveSha(stdout.toString().trim());
+          serveBlob(stdout.toString().trim());
         });
       }
 
-      function serveSha(sha) {
-        repository.getCommit(sha, function(error, commit) {
+      function serveBlob(sha) {
+        repository.getBlob(sha, function(error, blob) {
           if (error) return serveError(error);
-          repository.getTree(commit.tree, function(error, tree) {
-            if (error) return serveError(error);
-            var found = false;
-            tree.entries.forEach(function(entry) {
-              if (entry.name === file_) {
-                repository.getBlob(entry.id, function(error, blob) {
-                  if (error) return serveError(error);
-                  response.writeHead(200, {"Content-Type": type(file_)});
-                  response.end(blob.data);
-                });
-                found = true;
-              }
-            });
-            if (!found) serveNotFound();
-          });
+          response.writeHead(200, {"Content-Type": type(file_)});
+          response.end(blob.data);
         });
       }
     });
