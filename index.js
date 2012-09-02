@@ -1,4 +1,5 @@
 var gitteh = require("gitteh"),
+    exec = require("child_process").exec,
     mime = require("mime"),
     path = require("path");
 
@@ -22,13 +23,12 @@ exports.route = function() {
           : /^[0-9a-f]{40}$/.test(sha_) ? serveSha(sha_)
           : serveReference(sha_);
 
+      // Until gitteh supports rev-parse, this is the best we can do.
       function serveReference(reference) {
-        repository.getReference(reference, function(error, reference) {
-          if (error) return serveError(error);
-          reference.resolve(function(error, reference) {
-            if (error) return serveError(error);
-            serveSha(reference.target);
-          });
+        if (!/^[0-9A-Za-z_.~]+$/.test(reference)) return serveNotFound(); // for safety
+        exec("git rev-parse " + reference, {cwd: repository_}, function(error, stdout, stderr) {
+          if (error) return error.code === 128 ? serveNotFound() : serveError(error);
+          serveSha(stdout.toString().trim());
         });
       }
 
