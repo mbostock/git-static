@@ -31,7 +31,7 @@ exports.route = function() {
       function serveReference(reference) {
         exec("git rev-parse " + reference + ":" + file_, {cwd: repository_}, function(error, stdout, stderr) {
           if (error) return error.code === 128 ? serveNotFound() : serveError(error);
-          serveBlob(stdout.toString().trim());
+          serveBlob(stdout.toString("utf-8").trim());
         });
       }
 
