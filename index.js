@@ -13,7 +13,7 @@ function readBlob(repository, sha, file, callback) {
 
   // Until gitteh supports rev-parse, this is the best we can do.
   exec("git rev-parse " + sha + ":" + file, {cwd: repository}, function(error, stdout, stderr) {
-    if (error) return error.code === 128 ? callback(null, null) : callback(error);
+    if (error) return callback(error);
     gitteh.openRepository(repository, function(error, repository) {
       if (error) return callback(error);
       repository.getBlob(stdout.toString("utf-8").trim(), function(error, blob) {
@@ -42,7 +42,7 @@ exports.route = function() {
         || (file_ = file(request.url)) == null) return serveNotFound();
 
     readBlob(repository_, sha_, file_, function(error, data) {
-      if (error) return serveError(error);
+      if (error) return error.code === 128 ? serveNotFound() : serveError(error);
       response.statusCode = 200;
       response.setHeader("Content-Type", type(file_));
       response.end(data);
