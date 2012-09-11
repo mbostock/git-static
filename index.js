@@ -6,6 +6,26 @@ var gitteh = require("gitteh"),
 // Since we have to exec git rev-parse, make sure the arguments are safe.
 var safeRe = /^[0-9A-Za-z_.~/-]+$/;
 
+function readBlob(repository, sha, file, callback) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
+  if (!safeRe.test(sha)) return callback(new Error("invalid file"));
+  if (!safeRe.test(file)) return callback(new Error("invalid sha"));
+
+  // Until gitteh supports rev-parse, this is the best we can do.
+  exec("git rev-parse " + sha + ":" + file, {cwd: repository}, function(error, stdout, stderr) {
+    if (error) return error.code === 128 ? callback(null, null) : callback(error);
+    gitteh.openRepository(repository, function(error, repository) {
+      if (error) return callback(error);
+      repository.getBlob(stdout.toString("utf-8").trim(), function(error, blob) {
+        if (error) return callback(error);
+        callback(null, blob.data);
+      });
+    });
+  });
+}
+
+exports.readBlob = readBlob;
+
 exports.route = function() {
   var repository = defaultRepository,
       sha = defaultSha,
@@ -18,31 +38,14 @@ exports.route = function() {
         file_;
 
     if ((repository_ = repository(request.url)) == null
-        || !safeRe.test(repository_)
         || (sha_ = sha(request.url)) == null
-        || !safeRe.test(sha_)
-        || (file_ = file(request.url)) == null
-        || !safeRe.test(file_)) return serveNotFound();
+        || (file_ = file(request.url)) == null) return serveNotFound();
 
-    gitteh.openRepository(repository_, function(error, repository) {
-      return error ? serveError(error) : serveReference(sha_);
-
-      // Until gitteh supports rev-parse, this is the best we can do.
-      function serveReference(reference) {
-        exec("git rev-parse " + reference + ":" + file_, {cwd: repository_}, function(error, stdout, stderr) {
-          if (error) return error.code === 128 ? serveNotFound() : serveError(error);
-          serveBlob(stdout.toString("utf-8").trim());
-        });
-      }
-
-      function serveBlob(sha) {
-        repository.getBlob(sha, function(error, blob) {
-          if (error) return serveError(error);
-          response.statusCode = 200;
-          response.setHeader("Content-Type", type(file_));
-          response.end(blob.data);
-        });
-      }
+    readBlob(repository_, sha_, file_, function(error, data) {
+      if (error) return serveError(error);
+      response.statusCode = 200;
+      response.setHeader("Content-Type", type(file_));
+      response.end(data);
     });
 
     function serveError(error) {
