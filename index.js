@@ -1,5 +1,4 @@
-var gitteh = require("gitteh"),
-    exec = require("child_process").exec,
+var exec = require("child_process").exec,
     mime = require("mime"),
     path = require("path");
 
@@ -11,16 +10,9 @@ function readBlob(repository, sha, file, callback) {
   if (!safeRe.test(sha)) return callback(new Error("invalid file"));
   if (!safeRe.test(file)) return callback(new Error("invalid sha"));
 
-  // Until gitteh supports rev-parse, this is the best we can do.
-  exec("git rev-parse " + sha + ":" + file, {cwd: repository}, function(error, stdout, stderr) {
+  exec("git cat-file blob " + sha + ":" + file, {cwd: repository}, function(error, stdout, stderr) {
     if (error) return callback(error);
-    gitteh.openRepository(repository, function(error, repository) {
-      if (error) return callback(error);
-      repository.getBlob(stdout.toString("utf-8").trim(), function(error, blob) {
-        if (error) return callback(error);
-        callback(null, blob.data);
-      });
-    });
+    callback(null, stdout);
   });
 }
 

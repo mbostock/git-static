@@ -1,6 +1,6 @@
 {
   "name": "git-static",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": {
     "name": "Mike Bostock",
     "url": "http://bost.ocks.org/mike"
@@ -10,7 +10,6 @@
     "url": "http://github.com/mbostock/git-static.git"
   },
   "dependencies": {
-    "gitteh": "0.1.0",
     "mime": "1.2.x"
   },
   "devDependencies": {
