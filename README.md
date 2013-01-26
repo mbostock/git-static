@@ -4,13 +4,7 @@ Serve static files backed by Git.
 
 ## Installation
 
-After running `npm install`, you'll need to fix gitteh by running the following command:
-
-```bash
-mv node_modules/gitteh/build/Release node_modules/gitteh/build/default
-```
-
-Next, you'll want to initialize a bare Git repository to hold the static files:
+After running `npm install`, you'll want to initialize a bare Git repository to hold the static files:
 
 ```bash
 mkdir repository
@@ -29,7 +23,7 @@ git push static master
 Now you can launch the server!
 
 ```bash
-node examples/server --repository repository
+node node_modules/git-static/examples/server --repository repository
 ```
 
 Go to <http://localhost:3000/HEAD/path/to/file.html> to view a file from the source repository. You can replace `HEAD` with a specific commit version, or with short names and aliases for commits such as "0ad4156" or "HEAD~1".
