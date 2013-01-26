@@ -10,7 +10,7 @@ function readBlob(repository, sha, file, callback) {
   if (!safeRe.test(sha)) return callback(new Error("invalid file"));
   if (!safeRe.test(file)) return callback(new Error("invalid sha"));
 
-  exec("git cat-file blob " + sha + ":" + file, {cwd: repository}, function(error, stdout, stderr) {
+  exec("git cat-file blob " + sha + ":" + file, {cwd: repository, encoding: "binary"}, function(error, stdout, stderr) {
     if (error) return callback(error);
     callback(null, stdout);
   });
