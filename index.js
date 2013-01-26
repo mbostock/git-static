@@ -1,4 +1,4 @@
-var exec = require("child_process").exec,
+var child = require("child_process"),
     mime = require("mime"),
     path = require("path");
 
@@ -10,10 +10,24 @@ function readBlob(repository, sha, file, callback) {
   if (!safeRe.test(sha)) return callback(new Error("invalid file"));
   if (!safeRe.test(file)) return callback(new Error("invalid sha"));
 
-  exec("git cat-file blob " + sha + ":" + file, {cwd: repository, encoding: "binary"}, function(error, stdout, stderr) {
-    if (error) return callback(error);
-    callback(null, stdout);
+  var git = child.spawn("git", ["cat-file", "blob", sha + ":" + file], {cwd: repository}),
+      data = [],
+      exit;
+
+  git.stdout.on("data", function(chunk) {
+    data.push(chunk);
   });
+
+  git.on("exit", function(code) {
+    exit = code;
+  });
+
+  git.on("close", function() {
+    if (exit > 0) return callback(error(exit));
+    callback(null, Buffer.concat(data));
+  });
+
+  git.stdin.end();
 }
 
 exports.readBlob = readBlob;
@@ -103,4 +117,10 @@ function defaultType(file) {
 
 function text(type) {
   return /^(text\/)|(application\/(javascript|json)|image\/svg$)/.test(type);
+}
+
+function error(code) {
+  var e = new Error;
+  e.code = code;
+  return e;
 }
