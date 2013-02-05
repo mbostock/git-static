@@ -5,12 +5,12 @@ var child = require("child_process"),
 // Since we have to exec git rev-parse, make sure the arguments are safe.
 var safeRe = /^[0-9A-Za-z_.~/-]+$/;
 
-function readBlob(repository, sha, file, callback) {
+function readBlob(repository, revision, file, callback) {
   if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
-  if (!safeRe.test(sha)) return callback(new Error("invalid file"));
-  if (!safeRe.test(file)) return callback(new Error("invalid sha"));
+  if (!safeRe.test(revision)) return callback(new Error("invalid revision"));
+  if (!safeRe.test(file)) return callback(new Error("invalid file"));
 
-  var git = child.spawn("git", ["cat-file", "blob", sha + ":" + file], {cwd: repository}),
+  var git = child.spawn("git", ["cat-file", "blob", revision + ":" + file], {cwd: repository}),
       data = [],
       exit;
 
@@ -32,22 +32,54 @@ function readBlob(repository, sha, file, callback) {
 
 exports.readBlob = readBlob;
 
+exports.getCommit = function(repository, revision, callback) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
+  if (!safeRe.test(revision)) return callback(new Error("invalid revision"));
+
+  // Find the exact sha and parent sha[s].
+  child.exec("git show -s --format='%H %P' " + revision, {cwd: repository}, function(error, stdout, stderr) {
+    if (error) return callback(error);
+    var shas = stdout.split(/\s+/),
+        sha = shas[0],
+        parent = shas[1];
+
+    // Find a branch that contain the specified sha.
+    child.exec("git branch --contains " + sha + " | head -n1", {cwd: repository}, function(error, stdout, stderr) {
+      if (error) return callback(error);
+      var branch = stdout.slice(2).trim();
+
+      // Find a next commit.
+      child.exec("git log --format='%H' --reverse --ancestry-path " + sha + ".." + branch + " | head -n1", {cwd: repository}, function(error, stdout, stderr) {
+        if (error) return callback(error);
+        var child = stdout.trim();
+
+        callback(null, {
+          branch: branch || null,
+          sha: sha,
+          parent: parent || null,
+          child: child || null
+        });
+      });
+    });
+  });
+};
+
 exports.route = function() {
   var repository = defaultRepository,
-      sha = defaultSha,
+      revision = defaultRevision,
       file = defaultFile,
       type = defaultType;
 
   function route(request, response) {
     var repository_,
-        sha_,
+        revision_,
         file_;
 
     if ((repository_ = repository(request.url)) == null
-        || (sha_ = sha(request.url)) == null
+        || (revision_ = revision(request.url)) == null
         || (file_ = file(request.url)) == null) return serveNotFound();
 
-    readBlob(repository_, sha_, file_, function(error, data) {
+    readBlob(repository_, revision_, file_, function(error, data) {
       if (error) return error.code === 128 ? serveNotFound() : serveError(error);
       response.statusCode = 200;
       response.setHeader("Content-Type", type(file_));
@@ -73,9 +105,10 @@ exports.route = function() {
     return route;
   };
 
-  route.sha = function(_) {
-    if (!arguments.length) return sha;
-    sha = functor(_);
+  route.sha = // sha is deprecated; use revision instead
+  route.revision = function(_) {
+    if (!arguments.length) return revision;
+    revision = functor(_);
     return route;
   };
 
@@ -102,7 +135,7 @@ function defaultRepository() {
   return path.join(__dirname, "repository");
 }
 
-function defaultSha(url) {
+function defaultRevision(url) {
   return url.substring(1, url.indexOf("/", 1));
 }
 
