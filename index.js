@@ -3,7 +3,8 @@ var child = require("child_process"),
     path = require("path");
 
 // Since we have to exec git rev-parse, make sure the arguments are safe.
-var safeRe = /^[0-9A-Za-z_.~/-]+$/;
+var safeRe = /^[0-9A-Za-z_.~/-]+$/,
+    shaRe = /^[0-9a-f]{40}$/;
 
 function readBlob(repository, revision, file, callback) {
   if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
@@ -32,34 +33,36 @@ function readBlob(repository, revision, file, callback) {
 
 exports.readBlob = readBlob;
 
-exports.getCommit = function(repository, revision, callback) {
+exports.getBranches = function(repository, callback) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
+  child.exec("git branch -l", {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(null, stdout.split(/\n/).slice(0, -1).map(function(s) { return s.slice(2); }));
+  });
+};
+
+exports.getSha = function(repository, revision, callback) {
   if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
   if (!safeRe.test(revision)) return callback(new Error("invalid revision"));
 
-  // Find the exact sha and parent sha[s].
-  child.exec("git show -s --format='%H %P' " + revision, {cwd: repository}, function(error, stdout, stderr) {
+  child.exec("git rev-parse " + revision, {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
-    var shas = stdout.split(/\s+/),
-        sha = shas[0],
-        parent = shas[1];
+    callback(null, stdout.trim());
+  });
+};
 
-    // Find a branch that contain the specified sha.
-    child.exec("git branch --contains " + sha + " | head -n1", {cwd: repository}, function(error, stdout, stderr) {
-      if (error) return callback(error);
-      var branch = stdout.slice(2).trim();
+exports.getRelatedCommits = function(repository, branch, sha, callback) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
+  if (!safeRe.test(branch)) return callback(new Error("invalid branch"));
+  if (!shaRe.test(sha)) return callback(new Error("invalid sha"));
+  child.exec("git log --format='%H' " + branch + " | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    var shas = stdout.split(/\n/),
+        i = shas.indexOf(sha);
 
-      // Find a next commit.
-      child.exec("git log --format='%H' --reverse --ancestry-path " + sha + ".." + branch + " | head -n1", {cwd: repository}, function(error, stdout, stderr) {
-        if (error) return callback(error);
-        var child = stdout.trim();
-
-        callback(null, {
-          branch: branch || null,
-          sha: sha,
-          parent: parent || null,
-          child: child || null
-        });
-      });
+    callback(null, {
+      previous: shas[i + 1],
+      next: shas[i - 1]
     });
   });
 };
