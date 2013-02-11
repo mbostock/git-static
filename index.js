@@ -2,16 +2,9 @@ var child = require("child_process"),
     mime = require("mime"),
     path = require("path");
 
-// Since we have to exec git rev-parse, make sure the arguments are safe.
-var shaRe = /^[0-9a-f]{40}$/,
-    revisionRe = /^[0-9a-z]+([_-][0-9a-z]+)*([^~0-9])*$/i,
-    repositoryRe = /^[0-9a-z]+([_-][0-9a-z]+)*$/i,
-    branchRe = repositoryRe;
+var shaRe = /^[0-9a-f]{40}$/;
 
 function readBlob(repository, revision, file, callback) {
-  if (!repositoryRe.test(repository)) return callback(new Error("invalid repository name"));
-  if (!revisionRe.test(revision)) return callback(new Error("invalid revision name"));
-
   var git = child.spawn("git", ["cat-file", "blob", revision + ":" + file], {cwd: repository}),
       data = [],
       exit;
@@ -35,7 +28,6 @@ function readBlob(repository, revision, file, callback) {
 exports.readBlob = readBlob;
 
 exports.getBranches = function(repository, callback) {
-  if (!repositoryRe.test(repository)) return callback(new Error("invalid repository name"));
   child.exec("git branch -l", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(s) { return s.slice(2); }));
@@ -43,19 +35,15 @@ exports.getBranches = function(repository, callback) {
 };
 
 exports.getSha = function(repository, revision, callback) {
-  if (!repositoryRe.test(repository)) return callback(new Error("invalid repository name"));
-  if (!revisionRe.test(revision)) return callback(new Error("invalid revision name"));
-  child.exec("git rev-parse \"" + revision + "\"", {cwd: repository}, function(error, stdout) {
+  child.exec("git rev-parse '" + revision.replace(/'/g, "'\''") + "'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.trim());
   });
 };
 
 exports.getRelatedCommits = function(repository, branch, sha, callback) {
-  if (!repositoryRe.test(repository)) return callback(new Error("invalid repository name"));
-  if (!branchRe.test(branch)) return callback(new Error("invalid branch name"));
-  if (!shaRe.test(sha)) return callback(new Error("invalid sha name"));
-  child.exec("git log --format='%H' \"" + branch + "\" | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
+  if (!shaRe.test(sha)) return callback(new Error("invalid SHA"));
+  child.exec("git log --format='%H' '" + branch.replace(/'/g, "'\''") + "' | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     var shas = stdout.split(/\n/),
         i = shas.indexOf(sha);
