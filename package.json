@@ -1,6 +1,6 @@
 {
   "name": "git-static",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "author": {
     "name": "Mike Bostock",
     "url": "http://bost.ocks.org/mike"
@@ -14,6 +14,6 @@
   },
   "devDependencies": {
     "express": "3.0.x",
-    "optimist": "0.3.4"
+    "optimist": "0.3.x"
   }
 }

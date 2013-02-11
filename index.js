@@ -3,13 +3,13 @@ var child = require("child_process"),
     path = require("path");
 
 // Since we have to exec git rev-parse, make sure the arguments are safe.
-var safeRe = /^[0-9A-Za-z_.~/-]+$/,
+var safeRe = /^[0-9a-z_.~/ ][0-9a-z_.~/- ]*$/i,
     shaRe = /^[0-9a-f]{40}$/;
 
 function readBlob(repository, revision, file, callback) {
-  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
-  if (!safeRe.test(revision)) return callback(new Error("invalid revision"));
-  if (!safeRe.test(file)) return callback(new Error("invalid file"));
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository name"));
+  if (!safeRe.test(revision)) return callback(new Error("invalid revision name"));
+  if (!safeRe.test(file)) return callback(new Error("invalid file name"));
 
   var git = child.spawn("git", ["cat-file", "blob", revision + ":" + file], {cwd: repository}),
       data = [],
@@ -34,7 +34,7 @@ function readBlob(repository, revision, file, callback) {
 exports.readBlob = readBlob;
 
 exports.getBranches = function(repository, callback) {
-  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository name"));
   child.exec("git branch -l", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(s) { return s.slice(2); }));
@@ -42,20 +42,19 @@ exports.getBranches = function(repository, callback) {
 };
 
 exports.getSha = function(repository, revision, callback) {
-  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
-  if (!safeRe.test(revision)) return callback(new Error("invalid revision"));
-
-  child.exec("git rev-parse " + revision, {cwd: repository}, function(error, stdout) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository name"));
+  if (!safeRe.test(revision)) return callback(new Error("invalid revision name"));
+  child.exec("git rev-parse \"" + revision + "\"", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.trim());
   });
 };
 
 exports.getRelatedCommits = function(repository, branch, sha, callback) {
-  if (!safeRe.test(repository)) return callback(new Error("invalid repository"));
-  if (!safeRe.test(branch)) return callback(new Error("invalid branch"));
-  if (!shaRe.test(sha)) return callback(new Error("invalid sha"));
-  child.exec("git log --format='%H' " + branch + " | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
+  if (!safeRe.test(repository)) return callback(new Error("invalid repository name"));
+  if (!safeRe.test(branch)) return callback(new Error("invalid branch name"));
+  if (!shaRe.test(sha)) return callback(new Error("invalid sha name"));
+  child.exec("git log --format='%H' \"" + branch + "\" | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     var shas = stdout.split(/\n/),
         i = shas.indexOf(sha);
@@ -139,11 +138,11 @@ function defaultRepository() {
 }
 
 function defaultRevision(url) {
-  return url.substring(1, url.indexOf("/", 1));
+  return decodeURIComponent(url.substring(1, url.indexOf("/", 1)));
 }
 
 function defaultFile(url) {
-  return url.substring(url.indexOf("/", 1) + 1);
+  return decodeURIComponent(url.substring(url.indexOf("/", 1) + 1));
 }
 
 function defaultType(file) {
