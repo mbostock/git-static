@@ -83,20 +83,20 @@ exports.route = function() {
 
     readBlob(repository_, revision_, file_, function(error, data) {
       if (error) return error.code === 128 ? serveNotFound() : serveError(error);
-      response.statusCode = 200;
-      response.setHeader("Content-Type", type(file_));
+      response.writeHead(200, {
+        "Content-Type": type(file_),
+        "Cache-Control": "public, max-age=300"
+      });
       response.end(data);
     });
 
     function serveError(error) {
-      response.statusCode = 500;
-      response.setHeader("Content-Type", "text/plain");
+      response.writeHead(500, {"Content-Type": "text/plain"});
       response.end(error + "");
     }
 
     function serveNotFound() {
-      response.statusCode = 404;
-      response.setHeader("Content-Type", "text/plain");
+      response.writeHead(404, {"Content-Type": "text/plain"});
       response.end("File not found.");
     }
   }
