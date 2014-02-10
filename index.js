@@ -67,10 +67,10 @@ exports.getRelatedCommits = function(repository, branch, sha, callback) {
 };
 
 exports.getAuthors = function(repository, callback) {
-  child.exec("git shortlog -sn | cut -c8-", {cwd: repository}, function(error, stdout) {
-     if (error) return callback(error);
-     callback(stdout.split(/\n/));
-  });  
+  child.exec("git shortlog -sn < /dev/tty | cut -c8- ", {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(stdout.trim().split(/\n/));
+  }); 
 };
 
 exports.route = function() {
