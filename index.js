@@ -66,6 +66,13 @@ exports.getRelatedCommits = function(repository, branch, sha, callback) {
   });
 };
 
+exports.getAuthors = function(repository, callback) {
+  child.exec("git shortlog -sn | cut -c8-", {cwd: repository}, function(error, stdout) {
+     if (error) return callback(error);
+     callback(stdout.split(/\n/));
+  });  
+};
+
 exports.route = function() {
   var repository = defaultRepository,
       revision = defaultRevision,
