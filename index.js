@@ -42,12 +42,13 @@ exports.getSha = function(repository, revision, callback) {
 };
 
 exports.getCommit = function(repository, revision, callback) {
-  child.exec("git log -1 --format=\"format:%H%n%ad\" '" + revision.replace(/'/g, "'\''") + "'", {cwd: repository}, function(error, stdout) {
+  if (arguments.length < 3) callback = revision, revision = null;
+  child.exec("git for-each-ref --count 1 --sort=-committerdate 'refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : "") + "' --format='%(objectname)\n%(authordate:iso8601)'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     var lines = stdout.split("\n");
     callback(null, {
       sha: lines[0],
-      date: new Date(Date.parse(lines[1]))
+      date: new Date(lines[1])
     });
   });
 };
