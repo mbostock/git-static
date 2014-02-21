@@ -45,10 +45,13 @@ exports.getCommit = function(repository, revision, callback) {
   if (arguments.length < 3) callback = revision, revision = null;
   child.exec("git for-each-ref --count 1 --sort=-committerdate 'refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : "") + "' --format='%(objectname)\n%(authordate:iso8601)'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
-    var lines = stdout.split("\n");
+    var lines = stdout.split("\n"),
+        sha = lines[0],
+        date = new Date(lines[1]);
+    if (!shaRe.test(sha) || isNaN(date)) return void callback(new Error("unable to get commit"));
     callback(null, {
-      sha: lines[0],
-      date: new Date(lines[1])
+      sha: sha,
+      date: date
     });
   });
 };
