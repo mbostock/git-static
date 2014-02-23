@@ -2,7 +2,8 @@ var child = require("child_process"),
     mime = require("mime"),
     path = require("path");
 
-var shaRe = /^[0-9a-f]{40}$/;
+var shaRe = /^[0-9a-f]{40}$/,
+    emailRe = /^<.*@.*>$/;
 
 function readBlob(repository, revision, file, callback) {
   var git = child.spawn("git", ["cat-file", "blob", revision + ":" + file], {cwd: repository}),
@@ -41,9 +42,31 @@ exports.getSha = function(repository, revision, callback) {
   });
 };
 
+exports.getBranchCommits = function(repository, callback) {
+  child.exec("git for-each-ref refs/heads/ --format='%(objectname)\t%(refname:short)\t%(authordate:iso8601)\t%(authoremail)'", {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(null, stdout.split("\n").map(function(line) {
+      var fields = line.split("\t"),
+          sha = fields[0],
+          ref = fields[1],
+          date = new Date(fields[2]),
+          author = fields[3];
+      if (!shaRe.test(sha) || isNaN(date) || !emailRe.test(author)) return;
+      return {
+        sha: sha,
+        ref: ref,
+        date: date,
+        author: author.substring(1, author.length - 1)
+      };
+    }).filter(function(commit) {
+      return commit;
+    }));
+  });
+};
+
 exports.getCommit = function(repository, revision, callback) {
   if (arguments.length < 3) callback = revision, revision = null;
-  child.exec("git for-each-ref --count 1 --sort=-committerdate 'refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : "") + "' --format='%(objectname)\n%(authordate:iso8601)'", {cwd: repository}, function(error, stdout) {
+  child.exec("git for-each-ref --count 1 --sort=-authordate 'refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : "") + "' --format='%(objectname)\n%(authordate:iso8601)'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     var lines = stdout.split("\n"),
         sha = lines[0],
