@@ -43,7 +43,7 @@ exports.getSha = function(repository, revision, callback) {
 };
 
 exports.getBranchCommits = function(repository, callback) {
-  child.exec("git for-each-ref refs/heads/ --format='%(objectname)\t%(refname:short)\t%(authordate:iso8601)\t%(authoremail)'", {cwd: repository}, function(error, stdout) {
+  child.exec("git for-each-ref refs/heads/ --sort=-authordate --format='%(objectname)\t%(refname:short)\t%(authordate:iso8601)\t%(authoremail)'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split("\n").map(function(line) {
       var fields = line.split("\t"),
