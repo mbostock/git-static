@@ -93,6 +93,14 @@ exports.getRelatedCommits = function(repository, branch, sha, callback) {
   });
 };
 
+exports.listCommits = function(repository, sha1, sha2, callback) {
+  if (!shaRe.test(sha1) || !shaRe.test(sha2)) return callback(new Error("invalid SHA"));
+  child.exec("git rev-list " + sha1 + ".." + sha2, {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(null, stdout.split(/\n/));
+  });
+};
+
 exports.route = function() {
   var repository = defaultRepository,
       revision = defaultRevision,
