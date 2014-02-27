@@ -108,6 +108,19 @@ exports.listCommits = function(repository, sha1, sha2, callback) {
   });
 };
 
+exports.listAllCommits = function(repository, callback) {
+  child.exec("git log --branches --format='%H\t%ad'", {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
+      var fields = commit.split(/\t/);
+      return {
+        sha: fields[0],
+        date: new Date(fields[1])
+      };
+    }));
+  });
+};
+
 exports.route = function() {
   var repository = defaultRepository,
       revision = defaultRevision,
