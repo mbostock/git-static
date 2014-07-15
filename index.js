@@ -123,6 +123,19 @@ exports.listAllCommits = function(repository, callback) {
   });
 };
 
+exports.listTree = function(repository, revision, callback) {
+  child.exec("git ls-tree -r " + revision, {cwd: repository}, function(error, stdout) {
+    if (error) return callback(error);
+    callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
+      var fields = commit.split(/\t/);
+      return {
+        sha: fields[0].split(/\s/)[2],
+        name: fields[1]
+      };
+    }));
+  });
+};
+
 exports.route = function() {
   var repository = defaultRepository,
       revision = defaultRevision,
