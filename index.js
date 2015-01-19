@@ -212,7 +212,7 @@ function defaultRevision(url) {
 }
 
 function defaultFile(url) {
-  return decodeURIComponent(url.substring(url.indexOf("/", 1) + 1));
+  return decodeURIComponent(url.substring(url.indexOf("/", 1) + 1)).split("?")[0];
 }
 
 function defaultType(file) {
