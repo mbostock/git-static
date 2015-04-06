@@ -111,7 +111,7 @@ exports.listCommits = function(repository, sha1, sha2, callback) {
 };
 
 exports.listAllCommits = function(repository, callback) {
-  child.exec("git log --branches --format='%H\t%ad\t%an\t%s'", {cwd: repository}, function(error, stdout) {
+  child.exec("git log --branches --format='%H\t%ad\t%an\t%<(80,trunc)%s'", {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
       var fields = commit.split(/\t/);
