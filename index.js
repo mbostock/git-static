@@ -29,21 +29,21 @@ function readBlob(repository, revision, file, callback) {
 exports.readBlob = readBlob;
 
 exports.getBranches = function(repository, callback) {
-  child.exec("git branch -l", {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["branch", "-l"], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(s) { return s.slice(2); }));
   });
 };
 
 exports.getSha = function(repository, revision, callback) {
-  child.exec("git rev-parse '" + revision.replace(/'/g, "'\''") + "'", {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["rev-parse", revision.replace(/'/g, "'\''")], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.trim());
   });
 };
 
 exports.getBranchCommits = function(repository, callback) {
-  child.exec("git for-each-ref refs/heads/ --sort=-authordate --format='%(objectname)\t%(refname:short)\t%(authordate:iso8601)\t%(authoremail)'", {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["for-each-ref", "refs/heads/", "--sort=-authordate", "--format=%(objectname)\t%(refname:short)\t%(authordate:iso8601)\t%(authoremail)"], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split("\n").map(function(line) {
       var fields = line.split("\t"),
@@ -66,9 +66,9 @@ exports.getBranchCommits = function(repository, callback) {
 
 exports.getCommit = function(repository, revision, callback) {
   if (arguments.length < 3) callback = revision, revision = null;
-  child.exec(shaRe.test(revision)
-      ? "git log -1 --date=iso " + revision + " --format='%H\n%ad'"
-      : "git for-each-ref --count 1 --sort=-authordate 'refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : "") + "' --format='%(objectname)\n%(authordate:iso8601)'", {cwd: repository}, function(error, stdout) {
+  child.execFile("git", shaRe.test(revision)
+      ? ["log", "-1", "--date=iso", revision, "--format=%H\n%ad"]
+      : ["for-each-ref", "--count", "1", "--sort=-authordate", "refs/heads/" + (revision ? revision.replace(/'/g, "'\''") : ""), "--format=%(objectname)\n%(authordate:iso8601)"], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     var lines = stdout.split("\n"),
         sha = lines[0],
@@ -83,14 +83,16 @@ exports.getCommit = function(repository, revision, callback) {
 
 exports.getRelatedCommits = function(repository, branch, sha, callback) {
   if (!shaRe.test(sha)) return callback(new Error("invalid SHA: " + sha));
-  child.exec("git log --format='%H' '" + branch.replace(/'/g, "'\''") + "' | grep -C1 " + sha, {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["--no-pager", "log", "--format='%H'", branch.replace(/'/g, "'\''")], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
-    var shas = stdout.split(/\n/),
-        i = shas.indexOf(sha);
+
+    const regRelCommits = new RegExp("(?:'([^(\r?\n)]*)'\r?\n)?'"+ sha + "'(?:\r?\n'([^(\r?\n)]*)'\r?\n)?")
+
+    const match = regRelCommits.exec(stdout)
 
     callback(null, {
-      previous: shas[i + 1],
-      next: shas[i - 1]
+      previous: match[1] || '',
+      next: match[2] || ''
     });
   });
 };
@@ -98,7 +100,7 @@ exports.getRelatedCommits = function(repository, branch, sha, callback) {
 exports.listCommits = function(repository, sha1, sha2, callback) {
   if (!shaRe.test(sha1)) return callback(new Error("invalid SHA: " + sha1));
   if (!shaRe.test(sha2)) return callback(new Error("invalid SHA: " + sha2));
-  child.exec("git log --format='%H\t%ad' " + sha1 + ".." + sha2, {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["log", "--format=%H\t%ad", sha1 + ".." + sha2], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
       var fields = commit.split(/\t/);
@@ -111,7 +113,7 @@ exports.listCommits = function(repository, sha1, sha2, callback) {
 };
 
 exports.listAllCommits = function(repository, callback) {
-  child.exec("git log --branches --format='%H\t%ad\t%an\t%s'", {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["log", "--branches", "--format='%H\t%ad\t%an\t%s'"], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
       var fields = commit.split(/\t/);
@@ -126,7 +128,7 @@ exports.listAllCommits = function(repository, callback) {
 };
 
 exports.listTree = function(repository, revision, callback) {
-  child.exec("git ls-tree -r " + revision, {cwd: repository}, function(error, stdout) {
+  child.execFile("git", ["ls-tree", "-r", revision], {cwd: repository}, function(error, stdout) {
     if (error) return callback(error);
     callback(null, stdout.split(/\n/).slice(0, -1).map(function(commit) {
       var fields = commit.split(/\t/);
